@@ -1,9 +1,10 @@
-name: Develop Branch Checks
+name: Developer Checks
 
 on:
   push:
     branches: [develop]
   pull_request:
+    types: [opened, synchronize, reopened]
     branches: [develop]
   workflow_dispatch:
 
