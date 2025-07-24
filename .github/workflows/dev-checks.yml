@@ -18,7 +18,7 @@ jobs:
       - name: Validate branch name
         shell: bash
         run: |
-          if [[ "${GITHUB_REF##*/}" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)\/[a-z0-9._-]+$ ]]; then
+          if [[ "${GITHUB_REF##*/}" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)/[a-z0-9._-]+$ ]]; then
             echo "✅ Branch name is valid."
           else
             echo "❌ Invalid branch name format."
