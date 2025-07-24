@@ -32,7 +32,7 @@ jobs:
       - name: Validate PR title
         run: |
           title="${{ github.event.pull_request.title }}"
-          if [[ "$title" =~ ^(feat|fix|chore|docs|refactor|test|style|enhancement)\(.*\)\:.*$ ]]; then
+          if [[ "$title" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)\(.*\)\:.*$ ]]; then
             echo "✅ Valid PR title."
           else
             echo "❌ Invalid PR title format."
@@ -45,12 +45,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
       - name: CodeQL Initialization
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
 
-      - name: CodeQL Analysis
+      - name: Build C# project (required for CodeQL)
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+
+      - name: Analyze with CodeQL
         uses: github/codeql-action/analyze@v3
 
   build-dotnet:
