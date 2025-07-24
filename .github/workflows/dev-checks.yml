@@ -18,7 +18,15 @@ jobs:
       - name: Validate branch name
         shell: bash
         run: |
-          if [[ "${GITHUB_REF#refs/heads/}" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)/[a-z0-9._-]+$ ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            branch="${{ github.head_ref }}"  # PR source branch
+          else
+            branch="${GITHUB_REF#refs/heads/}"  # Push ref
+          fi
+
+          echo "Branch: $branch"
+
+          if [[ "$branch" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)/[a-z0-9._-]+$ ]]; then
             echo "✅ Branch name is valid."
           else
             echo "❌ Invalid branch name format."
@@ -40,6 +48,10 @@ jobs:
           fi
 
   source-code-review:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
