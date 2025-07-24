@@ -1,0 +1,75 @@
+name: Develop Branch Checks
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  validate-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Validate branch name
+        run: |
+          if [[ "${GITHUB_REF##*/}" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)\/[a-z0-9._-]+$ ]]; then
+            echo "Branch name is valid."
+          else
+            echo "❌ Invalid branch name format."
+            exit 1
+          fi
+
+  validate-pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          if [[ "$title" =~ ^(feat|fix|chore|docs|refactor|test|style|enhancement)\(.*\)\:.*$ ]]; then
+            echo "✅ Valid PR title."
+          else
+            echo "❌ Invalid PR title format."
+            exit 1
+          fi
+
+  source-code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: CodeQL Scan
+        uses: github/codeql-action/init@v2
+        with:
+          languages: csharp
+      - name: Analyze
+        uses: github/codeql-action/analyze@v2
+
+  build-dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore and build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
