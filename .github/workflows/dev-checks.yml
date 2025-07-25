@@ -26,7 +26,7 @@ jobs:
 
           echo "Branch: $branch"
 
-          if [[ "$branch" =~ ^(feature|fix|chore|docs|refactor|test|style|enhancement)/[a-z0-9._-]+$ ]]; then
+          if [[ "$branch" =~ ^((feature|fix|chore|docs|refactor|test|style|enhancement)/[a-z0-9._-]+|develop)$ ]]; then
             echo "✅ Branch name is valid."
           else
             echo "❌ Invalid branch name format."
