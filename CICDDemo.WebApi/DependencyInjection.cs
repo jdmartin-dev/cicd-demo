@@ -8,6 +8,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.Configure<ConnectionStrings>(configuration.GetSection("ConnectionStrings"));
+        services.Configure<ApiSettings>(configuration.GetSection("ApiSettings"));
 
         return services;
     }
