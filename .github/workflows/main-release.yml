@@ -1,0 +1,107 @@
+name: Main Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-dev-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check dev-checks workflow status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'dev-checks.yml',
+              branch: 'develop',
+              status: 'completed'
+            });
+            const successfulRun = runs.data.workflow_runs.find(run => run.conclusion === 'success');
+            if (!successfulRun) {
+              core.setFailed('❌ Latest dev-checks.yml did not succeed on develop.');
+            }
+
+  validate-version:
+    needs: validate-dev-checks
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.extract.outputs.tag }}
+    steps:
+      - name: Validate PR Version
+        id: extract
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              base: 'main',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 1
+            });
+            const body = pr.data[0]?.body || '';
+            const match = body.match(/##\s+Version\s*\n\s*(v\d+\.\d+\.\d+)/i);
+            if (!match) {
+              core.setFailed('❌ Version block missing or invalid in PR description.');
+              return;
+            }
+            core.setOutput("tag", match[1]);
+
+  sync-develop:
+    needs: validate-version
+    if: ${{ needs.validate-version.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git user
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@users.noreply.github.com"
+
+      - name: Configure push authentication
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: Fetch and switch to develop
+        run: |
+          git fetch origin develop
+          git checkout develop
+
+      - name: Merge main into develop
+        run: |
+          git merge origin/main --no-ff -m "Auto-merged changes from main into develop"
+
+      - name: Push develop with merged changes
+        run: |
+          git push origin develop
+
+  release:
+    needs: [validate-version, sync-develop]
+    if: ${{ needs.validate-version.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Use validated version tag
+        id: tagger
+        run: |
+          echo "tag=${{ needs.validate-version.outputs.tag }}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tagger.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
