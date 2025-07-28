@@ -4,3 +4,8 @@ GET {{WebApi_BaseHostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+GET {{WebApi_BaseHostAddress}}/healthcheck/
+Accept: application/json
+
+###
